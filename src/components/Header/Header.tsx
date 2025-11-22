@@ -1,50 +1,50 @@
-import { AddTodoEvent } from '../../App';
+import React from 'react';
+import classNames from 'classnames';
+import { Todo } from '../../types/Todo';
 
-type Props = {
-  loading: boolean;
-  setText: (value: string) => void;
-  addTodo: (e: AddTodoEvent) => void;
-  text: string;
-  isSubmitting: boolean;
-  inputRef?: React.RefObject<HTMLInputElement>;
-};
+interface HeaderProps {
+  todos: Todo[];
+  activeCount: number;
+  title: string;
+  setTitle: React.Dispatch<React.SetStateAction<string>>;
+  handleSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  isAppLoading: boolean;
+  newTodoInputRef: React.RefObject<HTMLInputElement>;
+}
 
-function Header({
-  loading,
-  addTodo,
-  text,
-  setText,
-  isSubmitting,
-  inputRef,
-}: Props) {
+export const Header: React.FC<HeaderProps> = ({
+  todos,
+  activeCount,
+  title,
+  setTitle,
+  handleSubmit,
+  isAppLoading,
+  newTodoInputRef,
+}) => {
   return (
     <header className="todoapp__header">
       {/* this button should have `active` class only if all todos are completed */}
       <button
         type="button"
-        className="todoapp__toggle-all active"
+        className={classNames('todoapp__toggle-all', {
+          active: todos.length > 0 && activeCount === 0,
+        })}
         data-cy="ToggleAllButton"
-        disabled={loading}
+        disabled={isAppLoading}
       />
 
-      {/* Add a todo on form submit */}
-      <form>
+      <form onSubmit={handleSubmit}>
         <input
           data-cy="NewTodoField"
           type="text"
           className="todoapp__new-todo"
           placeholder="What needs to be done?"
-          value={text}
-          onChange={e => {
-            setText(e.target.value);
-          }}
-          onKeyDown={addTodo}
-          ref={inputRef}
-          disabled={isSubmitting}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          disabled={isAppLoading}
+          ref={newTodoInputRef}
         />
       </form>
     </header>
   );
-}
-
-export default Header;
+};
