@@ -1,6 +1,4 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-/* eslint-disable jsx-a11y/control-has-associated-label */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { UserWarning } from './UserWarning';
 import { Todo } from './types/Todo';
 import Header from './components/Header/Header';
@@ -21,6 +19,9 @@ export const App: React.FC = () => {
   const [error, setError] = useState<null | string>(null);
   const [filter, setFilter] = useState<SortType | string>('All');
   const [loading, setLoading] = useState(false);
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const todoses = async () => {
@@ -37,7 +38,13 @@ export const App: React.FC = () => {
     };
 
     todoses();
-  }, [todos]);
+  }, []);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
 
   const closeError = () => {
     setError(null);
@@ -57,33 +64,76 @@ export const App: React.FC = () => {
     visibleGoods = visibleGoods.filter(good => good.completed);
   }
 
-  function addTodo(e: AddTodoEvent) {
+  const addTodo = async (e: AddTodoEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (text.trim()) {
-        addTodos({
-          title: text,
+      const trimmedText = text.trim();
+
+      if (!trimmedText) {
+        setError('Title should not be empty');
+        setTimeout(() => setError(null), 3000);
+
+        return;
+      }
+
+      const title = trimmedText.slice(0, 100);
+
+      setText(title);
+
+      const newTodo = {
+        id: 0,
+        title: title,
+        completed: false,
+      };
+
+      setTempTodo(newTodo);
+      setIsSubmitting(true);
+
+      try {
+        const createdTodo = await addTodos({
+          title,
           completed: false,
+          userId: USER_ID,
         });
+
+        setTodos(prev => [...prev, createdTodo]);
         setText('');
+        setTempTodo(null);
+      } catch (err) {
+        setError('Unable to add a todo');
+        setText(title);
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setError(null), 3000);
       }
     }
-  }
+  };
 
-  function deleteTodose(id: number) {
-    deleteTodo(id);
-  }
+  // Функция для удаления задачи
+  const deleteTodose = async (id: number) => {
+    setLoading(true);
+    try {
+      await deleteTodo(id);
+      setTodos(prev => prev.filter(todo => todo.id !== id));
+    } catch (err) {
+      setError('Unable to delete a todo');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
-
       <div className="todoapp__content">
         <Header
           loading={loading}
           addTodo={addTodo}
           text={text}
           setText={setText}
+          isSubmitting={isSubmitting}
+          inputRef={inputRef}
         />
         <TodoList todos={visibleGoods} deleteTodo={deleteTodose} />
         {/* Hide the footer if there are no todos */}
@@ -92,9 +142,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* DON'T use conditional rendering to hide the notification */}
-      {/* Add the 'hidden' class to hide the message smoothly */}
-
+      {/* Error Notification */}
       <div
         data-cy="ErrorNotification"
         className={`notification is-danger is-light has-text-weight-normal ${error ? '' : 'hidden'}`}
@@ -105,9 +153,17 @@ export const App: React.FC = () => {
           className="delete"
           onClick={closeError}
         />
-        {/* show only one message at a time */}
         {error}
       </div>
+
+      {tempTodo && (
+        <div className="todo-item">
+          <div className="todo-item__content">
+            <div className="todo-item__title">{tempTodo.title}</div>
+            <div className="todo-item__loader">Загрузка...</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

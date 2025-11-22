@@ -5,9 +5,18 @@ type Props = {
   setText: (value: string) => void;
   addTodo: (e: AddTodoEvent) => void;
   text: string;
+  isSubmitting: boolean;
+  inputRef?: React.RefObject<HTMLInputElement>;
 };
 
-function Header({ loading, addTodo, text, setText }: Props) {
+function Header({
+  loading,
+  addTodo,
+  text,
+  setText,
+  isSubmitting,
+  inputRef,
+}: Props) {
   return (
     <header className="todoapp__header">
       {/* this button should have `active` class only if all todos are completed */}
@@ -30,6 +39,8 @@ function Header({ loading, addTodo, text, setText }: Props) {
             setText(e.target.value);
           }}
           onKeyDown={addTodo}
+          ref={inputRef}
+          disabled={isSubmitting}
         />
       </form>
     </header>
